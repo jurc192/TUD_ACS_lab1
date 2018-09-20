@@ -23,6 +23,11 @@
 #pragma GCC optimize ("O1")
 /*************************************/
 
+typedef union _avxd {
+  __m256d val;
+  double arr[4];
+} avxd;
+
 
 Matrix<float> multiplyMatricesSIMD(Matrix<float> a, Matrix<float> b) {
 
@@ -47,8 +52,8 @@ Matrix<float> multiplyMatricesSIMD(Matrix<float> a, Matrix<float> b) {
       for(size_t i = 0; i < a.columns/8; i++) {
 
         // AVX load vectors
-        __m256 vec_a = _mm256_set_ps(a(r, i*8+7), a(r, i*8+6), a(r, i*8+5), a(r, i*8+4), a(r, i*8+3), a(r, i*8+2), a(r, i*8+1), a(r, i*8));
-        __m256 vec_b = _mm256_set_ps(bT(c, i*8+7), bT(c, i*8+6), bT(c, i*8+5), bT(c, i*8+4), bT(c, i*8+3), bT(c, i*8+2), bT(c, i*8+1), bT(c, i*8));
+        __m256 vec_a = _mm256_loadu_ps(&a(r, i*8));
+        __m256 vec_b = _mm256_loadu_ps(&bT(c, i*8));
 
         // Multiplication
         __m256 vec_r = _mm256_mul_ps(vec_a, vec_b);
@@ -64,6 +69,7 @@ Matrix<float> multiplyMatricesSIMD(Matrix<float> a, Matrix<float> b) {
       auto rem = b.rows % 8;
       if (rem != 0) {
         
+        // Vector mask: pos numbers - zeroes, neg numbers - remainder
         __m256i vec_mask = _mm256_set_epi32(7-rem, 6-rem, 5-rem, 4-rem, 3-rem, 2-rem, 1-rem, 0-rem);
 
         // AVX load vectors
@@ -109,12 +115,11 @@ Matrix<double> multiplyMatricesSIMD(Matrix<double> a, Matrix<double> b) {
     for(size_t c = 0; c < cols; c++) {
 
       double tmp = 0.0;
-      for(size_t i = 0; i < a.columns/4; i++) { 
+      for(size_t i = 0; i < a.columns/4; i++) {
 
         // AVX load vectors
-        __m256d vec_a = _mm256_set_pd( a(r, i*4+3), a(r, i*4+2), a(r, i*4+1), a(r, i*4));
-        __m256d vec_b = _mm256_set_pd( bT(c, i*4+3), bT(c, i*4+2), bT(c, i*4+1), bT(c, i*4));
- 
+        __m256d vec_a = _mm256_loadu_pd(&a(r, i*4));
+        __m256d vec_b = _mm256_loadu_pd(&bT(c, i*4));    
 
         // Multiplication
         __m256d vec_r = _mm256_mul_pd(vec_a, vec_b);
